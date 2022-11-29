@@ -19,6 +19,8 @@ import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverContext;
 import org.sosy_lab.java_smt.api.SolverContext.ProverOptions;
 
+import static de.buw.fm4se.java_smt.pcconfig.PcConfigReader.getCategorys;
+
 public class PcConfigGeneratorAndSolver {
 
     public static void main(String[] args) throws Exception {
@@ -45,9 +47,8 @@ public class PcConfigGeneratorAndSolver {
 
         System.out.println("\nSearching for a configuration costing at most " + budget_int);
 
-        // TODO implement the translation to SMT and the interpretation of the model
-
-        List<String> components_string = new ArrayList<String>(Arrays.asList("CPU", "motherboard", "RAM", "GPU", "storage", "opticalDrive", "cooler"));
+        //List<String> components_string = new ArrayList<String>(Arrays.asList("CPU", "motherboard", "RAM", "GPU", "storage", "opticalDrive", "cooler"));
+        List<String> components_string = getCategorys();
 
 
         // setting up SMT solver related stuff
@@ -86,33 +87,29 @@ public class PcConfigGeneratorAndSolver {
 
         // purpose
         // here we only encode one, e.g., office
-        //BooleanFormula purpose = bmgr.equivalence(booleanFormulaMap.get("dvdrw"), bmgr.makeTrue());
-        BooleanFormula purpose = bmgr.equivalence(booleanFormulaMap.get("RTX"), bmgr.makeTrue());
+        BooleanFormula purpose = bmgr.equivalence(booleanFormulaMap.get("dvdrw"), bmgr.makeTrue());
+        //BooleanFormula purpose = bmgr.equivalence(booleanFormulaMap.get("RTX"), bmgr.makeTrue());
 
         BooleanFormula budget = imgr.lessOrEquals(imgr.sum(costings), imgr.makeNumber(budget_int));
 
         // now feed all lines to the solver
         try (ProverEnvironment prover = context.newProverEnvironment(ProverOptions.GENERATE_MODELS)) {
 
-
-            /*/
-            BooleanFormula c1 = bmgr.and(
-                    bmgr.or(i3, i7, ryzen7),
-                    bmgr.or(mbIntel, mbAMD),
-                    bmgr.or(ram16gb, ram32gb, ram16gb),
-                    bmgr.or(hdd1tb, ssd1tb, ssd2tb));
-            /**/
-            List<String> components_constraint = new ArrayList<String>(Arrays.asList("CPU", "motherboard", "RAM", "storage"));
             BooleanFormula and = bmgr.makeTrue();
-            for (int i = 0; i < components_constraint.size(); ++i) {
+            // Only one of each component
+            // only one of many CPUs can be installed
 
-                BooleanFormula or = bmgr.makeFalse();
+            for (int i = 0; i < components_string.size(); ++i) { // CPU, RAM, ...
 
-//                TODO: make XOR, parse components only once from csv
-                for (Map.Entry<String, Integer> entry : components.get(components_constraint.get(i)).entrySet()) {
-                    or = bmgr.or(or, booleanFormulaMap.get(entry.getKey()));
+                BooleanFormula xor = bmgr.makeFalse();
+
+                for (Map.Entry<String, Integer> entry : components.get(components_string.get(i)).entrySet()) { // Loop over all RAM elements
+
+                    // For every element, an Xor has to be created
+                    // RAM1 xor RAM2 xor RAM3
+                    xor = bmgr.xor(xor, booleanFormulaMap.get(entry.getKey()));
                 }
-                and = bmgr.and(and, or);
+                and = bmgr.and(and, xor);
             }
 
             prover.addConstraint(and);

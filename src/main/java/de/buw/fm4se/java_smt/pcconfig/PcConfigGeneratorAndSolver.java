@@ -108,6 +108,7 @@ public class PcConfigGeneratorAndSolver {
 
                 BooleanFormula or = bmgr.makeFalse();
 
+//                TODO: make XOR, parse components only once from csv
                 for (Map.Entry<String, Integer> entry : components.get(components_constraint.get(i)).entrySet()) {
                     or = bmgr.or(or, booleanFormulaMap.get(entry.getKey()));
                 }
